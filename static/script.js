@@ -1,6 +1,35 @@
 const form = document.getElementById("registerForm");
-const result = document.getElementById("result");
+const message = document.getElementById("message");
+const tableBody = document.querySelector("#userTable tbody");
+const submitBtn = document.getElementById("submitBtn");
 
+let editId = null; // 編集モードのときにIDを保持
+
+// ===== APIから一覧を取得して表示 =====
+async function fetchList() {
+  const res = await fetch("/api/list");
+  const users = await res.json();
+
+  // 表示をクリア
+  tableBody.innerHTML = "";
+
+  // 各行を作成
+  users.forEach(user => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${user.id}</td>
+      <td>${user.name}</td>
+      <td>${user.email}</td>
+      <td>
+        <button class="edit" data-id="${user.id}">編集</button>
+        <button class="delete" data-id="${user.id}">削除</button>
+      </td>
+    `;
+    tableBody.appendChild(row);
+  });
+} 
+
+// ===== フォーム送信処理 =====
 form.addEventListener("submit", async (e) => {
   e.preventDefault(); // ページリロード防止
 
@@ -10,26 +39,49 @@ form.addEventListener("submit", async (e) => {
   // JS → Flask　へ送るデータ
   const payload = { name, email };
 
-  try {
-    // fetch() でPOST送信
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
+  const url = editId ? `/api/update/${editId}` : "/api/register";
+  const method = editId ? "PUT" : "POST";
 
-    // Flask からの応答を受け取る
+  // fetch() でPOST送信
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  // Flask からの応答を受け取る
+  const data = await res.json();
+
+  message.textContent = data.message;
+  message.style.color = res.ok ? "green" : "red";
+  
+  form.reset();
+  editId = null;
+  submitBtn.textContent = "登録";
+  fetchList(); // 再取得して反映
+});
+
+// ===== 編集・削除ボタンのクリック =====
+tableBody.addEventListener("click", async (e) => {
+  const id = e.target.dataset.id;
+  if (e.target.classList.contains("edit")) {
+    // 編集モード
+    const row = e.target.closest("tr");
+    const name = row.children[1].textContent;
+    const email = row.children[2].textContent;
+    document.getElementById("name").value = name;
+    document.getElementById("email").value = email;
+    editId = Number(id);
+    submitBtn.textContent = "更新";
+  } else if (e.target.classList.contains("delete")) {
+    if (!confirm("削除してよろしいですか？")) return;
+    const res = await fetch(`/api/delete/${id}`, { method: "DELETE" });
     const data = await res.json();
-
-    // 結果を表示
-    result.textContent = data.message;
-    result.style.color = "green";
-
-  } catch (err) {
-    console.error("通信エラー:", err);
-    result.textContent = "通信に失敗しました。";
-    result.style.color = "red";
+    message.textContent = data.message;
+    message.style.color = res.ok ? "green" : "red";
+    fetchList();
   }
 });
+
+// 初回ロード時に一覧を読み込む
+fetchList();
