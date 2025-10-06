@@ -2,22 +2,36 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Flask ✕ JS 通信体験</title>
+  <title>Flask ✕ JS フルCRUD</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input { margin: 4px; padding: 6px; }
+    button { padding: 6px 10px; }
+    table { margin-top: 16px; border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f3f3f3; }
+    .edit { background: #009688; color: white; border: none; padding: 4px 8px; border-radius: 4px; }
+    .delete { background: #e53935; color: white; border: none; padding: 4px 8px; border-radius: 4px; }
+  </style>
 </head>
 <body>
-  <h1>ユーザー登録フォーム</h1>
+  <h1>ユーザー管理</h1>
 
   <form id="registerForm">
-    <label for="name">名前：</label>
-    <input type="text" id="name" required>
-    <br>
-    <label for="email">メール：</label>
-    <input type="email" id="email" required>
-    <br><br>
-    <button type="submit">送信</button>
+    <input type="text" id="name" placeholder="名前" required>
+    <input type="email" id="email" placeholder="メール" required>
+    <button type="submit" id="submitBtn">登録</button>
   </form>
 
-  <p id="result"></p>
+  <p id="message"></p>
+
+  <h2>登録一覧</h2>
+  <table id="userTable">
+    <thead>
+      <tr><th>ID</th><th>名前</th><th>メール</th><th>操作</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>

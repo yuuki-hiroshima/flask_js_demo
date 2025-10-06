@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "name": "あいうえお",
+    "email": "abc@example.jp"
+  },
+  {
+    "name": "相談者",
+    "email": "def@example.jp",
+    "id": 2
+  },
+  {
+    "id": 3,
+    "name": "電池交換",
+    "email": "abc@abc"
+  }
+]
