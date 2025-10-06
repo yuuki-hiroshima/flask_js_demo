@@ -3,11 +3,19 @@ const message = document.getElementById("message");
 const tableBody = document.querySelector("#userTable tbody");
 const submitBtn = document.getElementById("submitBtn");
 
+// 追加：検索・ソートの参照
+const searchInput = document.getElementById("search");
+const sortSelect = document.getElementById("sort");
+
 let editId = null; // 編集モードのときにIDを保持
 
 // ===== APIから一覧を取得して表示 =====
 async function fetchList() {
-  const res = await fetch("/api/list");
+  
+  // 検索語とソート条件をURLに付与
+  const q = encodeURIComponent(searchInput?.value?.trim() || "");
+  const sort = encodeURIComponent(sortSelect?.value || "id_desc");
+  const res = await fetch(`/api/list?q=${q}&sort=${sort}`);
   const users = await res.json();
 
   // 表示をクリア
@@ -82,6 +90,10 @@ tableBody.addEventListener("click", async (e) => {
     fetchList();
   }
 });
+
+// 入力のたびに再取得（軽量用途ならOK）
+searchInput.addEventListener("input", fetchList);
+sortSelect.addEventListener("input", fetchList);
 
 // 初回ロード時に一覧を読み込む
 fetchList();

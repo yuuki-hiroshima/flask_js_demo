@@ -25,6 +25,19 @@
 
   <p id="message"></p>
 
+  <!-- 検索欄とソート選択をテーブルの上に追加します。 -->
+  <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+    <input id="search" type="text" placeholder="検索（名前/メール）" style="padding: 6px; flex: 1;">
+    <select id="sort" style="padding: 6px;">
+      <option value="id_desc">ID新しい順</option>
+      <option value="id_asc">ID古い順</option>
+      <option value="name_asc">名前A→Z</option>
+      <option value="name_desc">名前Z→A</option>
+      <option value="email_asc">メールA→Z</option>
+      <option value="email_desc">メールZ→A</option>
+    </select>
+  </div>
+
   <h2>登録一覧</h2>
   <table id="userTable">
     <thead>
