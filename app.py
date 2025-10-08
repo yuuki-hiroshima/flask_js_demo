@@ -116,14 +116,22 @@
 
 # ↓＝＝＝＝＝DB（SQLite）バージョン ＝＝＝＝＝↓
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import sqlite3
 import os
 
 app = Flask(__name__)
 
-# ===== データベース設定 =====
-DB_FILE = "users.db"  # SQLiteのファイル名
+# ===== learning/ を公開（学習用ページをブラウザ経由で開くため） =====
+@app.route("/learning/<path:filename>")
+def learning_static(filename):
+    base_dir = os.path.dirname(os.path.abspath(__file__))   # .../flask_js_demo
+    learning_dir = os.path.join(base_dir, "..", "learning") # .../learning
+    return send_from_directory(learning_dir, filename)
+
+# ===== データベース設定（app.py と同じフォルダの users.db を常に使う） =====
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, "users.db")
 
 def init_db():
     """データベースがなければ作成し、テーブルを準備"""
@@ -133,23 +141,22 @@ def init_db():
             c.execute("""
                 CREATE TABLE users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      name TEXT NOT NULL,
-                      email TEXT NOT NULL UNIQUE
+                    name TEXT NOT NULL,
+                    email TEXT NOT NULL UNIQUE
                 )
             """)
             conn.commit()
 
-# ===== DB接続ユーティリティ =====
 def get_connection():
-    """毎回新しい接続を返す（with構文で自動クローズされる）"""
+    """毎回新しい接続を返す"""
     return sqlite3.connect(DB_FILE)
 
-# ===== HTML表示 =====
+# ---------- HTML表示 ----------
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# ===== 登録（Create） =====
+# ---------- 登録（Create） ----------
 @app.route("/api/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -158,7 +165,7 @@ def register():
 
     if not name or not email:
         return jsonify({"status": "error", "message": "名前とメールは必須です。"}), 400
-    
+
     try:
         with get_connection() as conn:
             c = conn.cursor()
@@ -168,13 +175,12 @@ def register():
     except sqlite3.IntegrityError:
         return jsonify({"status": "error", "message": "このアドレスはすでに登録済みです。"}), 409
 
-# ===== 一覧取得（Read） =====
+# ---------- 一覧取得（Read） ----------
 @app.route("/api/list", methods=["GET"])
 def get_list():
     q = request.args.get("q", "", type=str).strip()
     sort = request.args.get("sort", "id_desc", type=str)
 
-    # 検索条件を組み立て（名前 or メールに部分一致）
     where_sql = ""
     params = []
     if q:
@@ -182,7 +188,6 @@ def get_list():
         like = f"%{q}%"
         params.extend([like, like])
 
-    # ソート条件のホワイトリスト（SQLインジェクション対策：直接文字連結しない）
     sort_map = {
         "id_asc": "id ASC",
         "id_desc": "id DESC",
@@ -198,10 +203,12 @@ def get_list():
     with get_connection() as conn:
         c = conn.cursor()
         c.execute(sql, params)
-        users = [{"id": row[0], "name": row[1], "email": row[2]} for row in c.fetchall()]
+        rows = c.fetchall()  # ← 一度だけ取得
+        users = [{"id": r[0], "name": r[1], "email": r[2]} for r in rows]
+
     return jsonify(users)
 
-# ===== 編集（Update） =====
+# ---------- 編集（Update） ----------
 @app.route("/api/update/<int:user_id>", methods=["PUT"])
 def update_user(user_id):
     data = request.get_json()
@@ -210,17 +217,17 @@ def update_user(user_id):
 
     if not name or not email:
         return jsonify({"status": "error", "message": "名前とメールは必須です。"}), 400
-    
+
     with get_connection() as conn:
         c = conn.cursor()
         c.execute("UPDATE users SET name=?, email=? WHERE id=?", (name, email, user_id))
         conn.commit()
         if c.rowcount == 0:
             return jsonify({"status": "error", "message": "該当ユーザーが見つかりません。"}), 404
-        
+
     return jsonify({"status": "success", "message": "更新しました。"})
 
-# ===== 削除（Delete） =====
+# ---------- 削除（Delete） ----------
 @app.route("/api/delete/<int:user_id>", methods=["DELETE"])
 def delete_user(user_id):
     with get_connection() as conn:
@@ -229,9 +236,10 @@ def delete_user(user_id):
         conn.commit()
         if c.rowcount == 0:
             return jsonify({"status": "error", "message": "該当ユーザーが見つかりません。"}), 404
+
     return jsonify({"status": "success", "message": "削除しました。"})
 
-# ===== アプリ起動時にDB初期化 =====
+# ---------- アプリ起動 ----------
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host="127.0.0.1", port=8000)
